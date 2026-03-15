@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-color: #000000;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+a,
+button {
+  transition: all 0.2s ease;
+}
+
+.primary-bg {
+  background-color: var(--primary-color);
+}
+
+.primary-text {
+  color: var(--primary-color);
+}
+
+.primary-border {
+  border-color: var(--primary-color);
+}
