@@ -2,6 +2,7 @@ import "./globals.css";
 import { AuthProvider } from "@/context/auth-context";
 import Header from "@/components/ui/header";
 import AppShell from "@/components/ui/app-shell";
+import Footer from "@/components/ui/footer";
 
 export default function RootLayout({
   children,
@@ -15,6 +16,7 @@ export default function RootLayout({
           <AppShell>
             <Header />
             {children}
+            <Footer />
           </AppShell>
         </AuthProvider>
       </body>
