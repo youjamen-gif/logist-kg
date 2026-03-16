@@ -1,3 +1,4 @@
+// ...удалён дублирующий импорт...
 import {
   Body,
   Controller,
@@ -8,6 +9,9 @@ import {
   Query,
   Req,
   UseGuards,
+  Patch,
+  Delete,
+  NotFoundException,
 } from '@nestjs/common'
 import { FreightsService } from './freights.service'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'

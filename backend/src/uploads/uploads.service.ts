@@ -13,7 +13,6 @@ export class UploadsService {
       },
       select: {
         id: true,
-        avatarUrl: true,
       },
     })
   }

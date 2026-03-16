@@ -14,7 +14,7 @@ export class AdminService {
   updateUserStatus(id: string, status: string) {
     return this.prisma.user.update({
       where: { id },
-      data: { status },
+      data: { status: status as any },
     })
   }
 

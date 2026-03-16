@@ -10,8 +10,10 @@ import { FreightsModule } from './freights/freights.module';
 import { BidsModule } from './bids/bids.module';
 import { SettingsModule } from './settings/settings.module';
 
+
 import { ReportsModule } from './reports/reports.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -24,6 +26,7 @@ import { UploadsModule } from './uploads/uploads.module';
     SettingsModule,
     ReportsModule,
     UploadsModule,
+    AuditModule,
   ],
   // ...existing code...
 })

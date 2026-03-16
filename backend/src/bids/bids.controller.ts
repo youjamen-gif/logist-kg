@@ -1,8 +1,3 @@
-  @UseGuards(JwtAuthGuard)
-  @Get('my')
-  findMy(@Req() req: any) {
-    return this.bidsService.findMy(req.user.id)
-  }
 import {
   Body,
   Controller,
@@ -30,7 +25,14 @@ export class BidsController {
     if (!['driver', 'admin'].includes(req.user.role)) {
       throw new ForbiddenException('Only driver can create bid')
     }
+
     return this.bidsService.create(req.user.id, body)
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('my')
+  findMy(@Req() req: any) {
+    return this.bidsService.findMy(req.user.id)
   }
 
   @UseGuards(JwtAuthGuard)
@@ -48,6 +50,7 @@ export class BidsController {
   ) {
     return this.bidsService.updateStatus(req.user, id, body.status)
   }
+
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   deleteOwn(@Req() req: any, @Param('id') id: string) {

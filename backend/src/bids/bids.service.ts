@@ -1,12 +1,3 @@
-  async findMy(driverId: string) {
-    return this.prisma.bid.findMany({
-      where: { driverUserId: driverId },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        freight: true,
-      },
-    })
-  }
 import {
   ForbiddenException,
   Injectable,
@@ -33,6 +24,16 @@ export class BidsService {
         driverUserId: driverId,
         price: data.price,
         message: data.message,
+      },
+    })
+  }
+
+  async findMy(driverId: string) {
+    return this.prisma.bid.findMany({
+      where: { driverUserId: driverId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        freight: true,
       },
     })
   }
@@ -66,10 +67,7 @@ export class BidsService {
       throw new NotFoundException('Bid not found')
     }
 
-    if (
-      user.role !== 'admin' &&
-      bid.freight.createdByUserId !== user.id
-    ) {
+    if (user.role !== 'admin' && bid.freight.createdByUserId !== user.id) {
       throw new ForbiddenException('No access to update bid')
     }
 
