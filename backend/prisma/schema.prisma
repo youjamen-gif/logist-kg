@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  driver
+  shipper
+  dispatcher
+  admin
+}
+
+enum UserStatus {
+  active
+  blocked
+  pending
+}
+
+model User {
+  id                String         @id @default(uuid())
+  email             String         @unique
+  passwordHash      String
+  role              UserRole
+  name              String
+  phone             String?
+  phoneVerified     Boolean        @default(false)
+  documentsVerified Boolean        @default(false)
+  status            UserStatus     @default(active)
+  rating            Float          @default(0)
+  reviewsCount      Int            @default(0)
+  avatarUrl         String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  freights          Freight[]
+  bids              Bid[]
+  vehicles          Vehicle[]
+  notifications     Notification[]
+  reviewsGiven      Review[] @relation("reviews_given")
+  reviewsReceived   Review[] @relation("reviews_received")
+  driverDocuments   DriverDocument[]
+  companyDocuments  CompanyDocument[]
+
+  @@map("users")
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  fromUserId String
+  toUserId   String
+  freightId  String
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  fromUser User @relation("reviews_given", fields: [fromUserId], references: [id])
+  toUser   User @relation("reviews_received", fields: [toUserId], references: [id])
+
+  @@unique([fromUserId, toUserId, freightId])
+}
+
+model Vehicle {
+  id            String   @id @default(uuid())
+  driverUserId  String
+  plateNumber   String
+  trailerNumber String?
+  truckType     String
+  capacity      Float
+  dimensions    String?
+  techPassportUrl String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  driver User @relation(fields: [driverUserId], references: [id])
+
+  @@map("vehicles")
+}
+
+model DriverDocument {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String
+  fileUrl     String
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("driver_documents")
+}
+
+model CompanyDocument {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String
+  fileUrl     String
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("company_documents")
+}
+
+model Freight {
+  id                 String   @id @default(uuid())
+  createdByUserId    String
+  originCity         String
+  destinationCity    String
+  originCountry      String
+  destinationCountry String
+  weight             Float
+  price              Float?
+  currency           String   @default("KGS")
+  truckType          String
+  description        String?
+  loadingDate        DateTime
+  status             String   @default("active")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user               User     @relation(fields: [createdByUserId], references: [id])
+  bids               Bid[]
+  conversations      Conversation[]
+
+  @@map("freights")
+}
+
+model Bid {
+  id           String   @id @default(uuid())
+  freightId    String
+  driverUserId String
+  price        Float
+  message      String?
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  freight      Freight  @relation(fields: [freightId], references: [id])
+  driver       User     @relation(fields: [driverUserId], references: [id])
+
+  @@map("bids")
+}
+
+model Report {
+  id               String   @id @default(uuid())
+  createdByUserId  String
+  targetEntityType String
+  targetEntityId   String
+  reportType       String
+  message          String
+  status           String   @default("new")
+  moderatorComment String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("reports")
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  freightId String
+  driverId  String
+  shipperId String
+  createdAt DateTime @default(now())
+
+  freight   Freight  @relation(fields: [freightId], references: [id], onDelete: Cascade)
+  messages  Message[]
+
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  senderId       String
+  text           String
+  createdAt      DateTime     @default(now())
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model SystemSetting {
+  id              String   @id @default(uuid())
+  key             String   @unique
+  value           String
+  updatedByUserId String?
+  updatedAt       DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+model Banner {
+  id        String   @id @default(uuid())
+  title     String
+  imageUrl  String
+  link      String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("banners")
+}
+
+model Ad {
+  id        String   @id @default(uuid())
+  title     String
+  imageUrl  String
+  link      String?
+  isActive  Boolean  @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("ads")
+}
