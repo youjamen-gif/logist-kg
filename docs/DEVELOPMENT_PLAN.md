@@ -1,4 +1,4 @@
-# DEVELOPMENT_WORKFLOW.md — Logist.kg
+# DEVELOPMENT_PLAN.md — Logist.kg
 
 Документ описывает стандартный процесс разработки платформы Logist.kg.
 
