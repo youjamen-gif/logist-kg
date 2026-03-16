@@ -1,902 +1,833 @@
-PROJECT_STRUCTURE.md — Logist.kg
-1. Goal
+# PROJECT_STRUCTURE.md — Logist.kg
 
-This document describes the final project structure of Logist.kg after moving away from Firebase.
+Документ фиксирует целевую структуру репозитория Logist.kg.
+Это главный ориентир для AI и разработчиков: куда создавать файлы, где должна жить логика и какие зоны считаются актуальными.
 
-Main stack:
+---
 
-Frontend: Next.js
+# 1. Цель структуры
 
-Backend: NestJS
+Структура проекта должна обеспечивать:
 
-Database: PostgreSQL
+- понятное разделение frontend и backend
+- предсказуемое размещение файлов
+- лёгкую навигацию для AI и человека
+- безопасное масштабирование проекта
+- минимизацию хаоса и дублирования
+- удобную поддержку production-разработки
 
-ORM: Prisma
+---
 
-Storage: MinIO / S3
+# 2. Главный принцип
 
-Cache: Redis
+Проект делится на 3 основные рабочие зоны:
 
-Realtime: Socket.IO
+- `frontend/` — клиентская часть
+- `backend/` — серверная часть
+- `docs/` — архитектурная и продуктовая документация
 
-2. Root project structure
+Все новые изменения AI должен вносить только в эти целевые зоны, если нет специально оговорённой причины сделать иначе.
+
+---
+
+# 3. Корневая структура репозитория
+
+Ниже приведена целевая структура верхнего уровня.
+
+```text
 logist-kg/
-│
-├── frontend/                  # Next.js frontend
-├── backend/                   # NestJS backend
-├── database/                  # Prisma schema, migrations, seeds
-├── docs/                      # Architecture and technical docs
-├── storage/                   # Local development storage configs
-├── scripts/                   # Helper scripts
-├── .env.example
-├── .gitignore
-├── docker-compose.yml
-└── README.md
-3. docs structure
-docs/
-├── BACKEND_ARCHITECTURE.md
-├── DATABASE_SCHEMA_SQL.md
-├── AUTH_FLOW.md
-├── API_SPEC_BACKEND.md
-├── PROJECT_STRUCTURE.md
-├── STORAGE_ARCHITECTURE.md
-├── REALTIME_ARCHITECTURE.md
-├── DEPLOYMENT.md
-└── ROADMAP.md
-
-Purpose:
-
-BACKEND_ARCHITECTURE.md — backend overview
-
-DATABASE_SCHEMA_SQL.md — business entities and tables
-
-AUTH_FLOW.md — JWT and auth logic
-
-API_SPEC_BACKEND.md — backend endpoints
-
-PROJECT_STRUCTURE.md — folder map
-
-STORAGE_ARCHITECTURE.md — files and object storage
-
-REALTIME_ARCHITECTURE.md — chat and live events
-
-DEPLOYMENT.md — deployment plan
-
-ROADMAP.md — development stages
-
-4. frontend structure
-
-Frontend is built with Next.js App Router.
-
+├─ frontend/
+├─ backend/
+├─ docs/
+├─ .gitignore
+├─ README.md
+├─ docker-compose.yml                # опционально
+├─ .env.example
+└─ scripts/                          # опционально, только для общих devops/dev scripts
+4. Назначение корневых директорий
 frontend/
-│
-├── public/
-│   ├── images/
-│   ├── icons/
-│   └── fonts/
-│
-├── src/
-│   ├── app/
-│   │   ├── (public)/
-│   │   │   ├── page.tsx
-│   │   │   ├── find-cargo/
-│   │   │   ├── cargo/[id]/
-│   │   │   ├── login/
-│   │   │   ├── register/
-│   │   │   └── contact/
-│   │   │
-│   │   ├── (dashboard)/
-│   │   │   ├── dashboard/
-│   │   │   ├── profile/
-│   │   │   ├── my-freights/
-│   │   │   ├── my-bids/
-│   │   │   ├── vehicles/
-│   │   │   ├── chat/
-│   │   │   ├── notifications/
-│   │   │   └── settings/
-│   │   │
-│   │   ├── (admin)/
-│   │   │   ├── admin/
-│   │   │   ├── admin/users/
-│   │   │   ├── admin/freights/
-│   │   │   ├── admin/reports/
-│   │   │   ├── admin/verification/
-│   │   │   ├── admin/banners/
-│   │   │   ├── admin/ads/
-│   │   │   ├── admin/settings/
-│   │   │   └── admin/audit-logs/
-│   │   │
-│   │   ├── layout.tsx
-│   │   ├── globals.css
-│   │   └── not-found.tsx
-│   │
-│   ├── components/
-│   │   ├── ui/
-│   │   ├── layout/
-│   │   ├── cargo/
-│   │   ├── bid/
-│   │   ├── chat/
-│   │   ├── notification/
-│   │   ├── admin/
-│   │   └── shared/
-│   │
-│   ├── hooks/
-│   │   ├── use-auth.ts
-│   │   ├── use-system-settings.ts
-│   │   ├── use-notifications.ts
-│   │   └── use-debounce.ts
-│   │
-│   ├── lib/
-│   │   ├── api/
-│   │   │   ├── client.ts
-│   │   │   ├── auth.ts
-│   │   │   ├── users.ts
-│   │   │   ├── freights.ts
-│   │   │   ├── bids.ts
-│   │   │   ├── vehicles.ts
-│   │   │   ├── chat.ts
-│   │   │   ├── notifications.ts
-│   │   │   ├── admin.ts
-│   │   │   └── settings.ts
-│   │   │
-│   │   ├── constants/
-│   │   ├── helpers/
-│   │   ├── validators/
-│   │   └── types/
-│   │
-│   ├── context/
-│   │   ├── auth-context.tsx
-│   │   └── app-context.tsx
-│   │
-│   └── middleware.ts
-│
-├── package.json
-├── tsconfig.json
-├── next.config.ts
-├── postcss.config.js
-├── tailwind.config.ts
-└── .env.local
-5. frontend responsibilities
 
-Frontend handles:
+Содержит весь код клиентского приложения:
 
-UI rendering
+страницы
 
-forms
+layouts
+
+UI-компоненты
+
+формы
+
+клиентские хуки
+
+API client
+
+frontend utilities
+
+frontend types
+
+backend/
+
+Содержит весь код серверного приложения:
+
+NestJS modules
+
+controllers
+
+services
+
+DTO
+
+guards
+
+Prisma schema
+
+миграции
+
+backend utilities
+
+jobs
+
+integrations
+
+docs/
+
+Содержит архитектурные, продуктовые и технические документы:
+
+структура проекта
+
+архитектура backend
+
+схема БД
+
+auth flow
+
+admin panel structure
+
+API spec
+
+roadmap
+
+development plan
+
+scripts/
+
+Разрешён только для общих скриптов проекта:
+
+seed helpers
+
+deployment helpers
+
+environment bootstrap scripts
+
+data migration helpers
+
+CI/CD utilities
+
+AI не должен переносить туда бизнес-логику приложения.
+
+5. Что считается legacy и не должно развиваться
+
+Если в репозитории есть старые директории или старые файлы вне целевой структуры, AI должен считать их legacy-зоной, пока они явно не включены в новую архитектуру.
+
+Примеры потенциального legacy:
+
+корневой src/, если там остались следы старой реализации
+
+старые firebase-конфиги
+
+временные файлы генерации
+
+устаревшие markdown-инструкции, противоречащие текущей архитектуре
+
+Правило:
+
+AI не должен развивать legacy-структуру.
+AI должен переносить проект к целевой структуре, а не укреплять старую.
+
+6. Полная целевая структура frontend
+frontend/
+├─ src/
+│  ├─ app/
+│  │  ├─ (public)/
+│  │  │  ├─ page.tsx
+│  │  │  ├─ find-cargo/
+│  │  │  ├─ find-transport/
+│  │  │  ├─ cargo/[id]/
+│  │  │  ├─ transport/[id]/
+│  │  │  ├─ login/
+│  │  │  ├─ register/
+│  │  │  ├─ pricing/
+│  │  │  ├─ about/
+│  │  │  ├─ contacts/
+│  │  │  ├─ terms/
+│  │  │  └─ privacy/
+│  │  │
+│  │  ├─ (dashboard)/
+│  │  │  ├─ dashboard/
+│  │  │  ├─ my-cargo/
+│  │  │  ├─ my-vehicles/
+│  │  │  ├─ my-bids/
+│  │  │  ├─ my-bookings/
+│  │  │  ├─ notifications/
+│  │  │  ├─ messages/
+│  │  │  ├─ settings/
+│  │  │  └─ profile/
+│  │  │
+│  │  ├─ admin/
+│  │  │  ├─ page.tsx
+│  │  │  ├─ users/
+│  │  │  ├─ freights/
+│  │  │  ├─ vehicles/
+│  │  │  ├─ bids/
+│  │  │  ├─ verification/
+│  │  │  ├─ reports/
+│  │  │  ├─ audit-logs/
+│  │  │  ├─ banners/
+│  │  │  ├─ ads/
+│  │  │  └─ settings/
+│  │  │
+│  │  ├─ layout.tsx
+│  │  ├─ page.tsx
+│  │  ├─ loading.tsx
+│  │  ├─ error.tsx
+│  │  └─ not-found.tsx
+│  │
+│  ├─ components/
+│  │  ├─ ui/
+│  │  ├─ layout/
+│  │  ├─ shared/
+│  │  ├─ forms/
+│  │  ├─ tables/
+│  │  ├─ cards/
+│  │  ├─ filters/
+│  │  ├─ modals/
+│  │  ├─ auth/
+│  │  ├─ cargo/
+│  │  ├─ vehicle/
+│  │  ├─ bid/
+│  │  ├─ chat/
+│  │  ├─ notification/
+│  │  └─ admin/
+│  │
+│  ├─ features/
+│  │  ├─ auth/
+│  │  ├─ cargo/
+│  │  ├─ vehicles/
+│  │  ├─ bids/
+│  │  ├─ users/
+│  │  ├─ notifications/
+│  │  ├─ chat/
+│  │  ├─ admin/
+│  │  └─ verification/
+│  │
+│  ├─ lib/
+│  │  ├─ api/
+│  │  │  ├─ client.ts
+│  │  │  ├─ auth.ts
+│  │  │  ├─ cargo.ts
+│  │  │  ├─ vehicles.ts
+│  │  │  ├─ bids.ts
+│  │  │  ├─ users.ts
+│  │  │  ├─ admin.ts
+│  │  │  ├─ notifications.ts
+│  │  │  └─ chat.ts
+│  │  ├─ config/
+│  │  ├─ utils/
+│  │  ├─ constants/
+│  │  ├─ formatters/
+│  │  ├─ guards/
+│  │  └─ socket/
+│  │
+│  ├─ hooks/
+│  │  ├─ useAuth.ts
+│  │  ├─ usePagination.ts
+│  │  ├─ useDebounce.ts
+│  │  ├─ useNotifications.ts
+│  │  └─ useSocket.ts
+│  │
+│  ├─ store/
+│  │  ├─ auth/
+│  │  ├─ filters/
+│  │  ├─ notifications/
+│  │  └─ ui/
+│  │
+│  ├─ providers/
+│  │  ├─ AuthProvider.tsx
+│  │  ├─ QueryProvider.tsx
+│  │  ├─ SocketProvider.tsx
+│  │  └─ ThemeProvider.tsx
+│  │
+│  ├─ types/
+│  │  ├─ api.ts
+│  │  ├─ auth.ts
+│  │  ├─ cargo.ts
+│  │  ├─ vehicle.ts
+│  │  ├─ bid.ts
+│  │  ├─ user.ts
+│  │  ├─ admin.ts
+│  │  └─ common.ts
+│  │
+│  ├─ styles/
+│  │  └─ globals.css
+│  │
+│  └─ middleware.ts
+│
+├─ public/
+├─ package.json
+├─ tsconfig.json
+├─ next.config.ts
+├─ tailwind.config.ts
+├─ postcss.config.js
+└─ .env.example
+7. Правила структуры frontend
+7.1 app/
+
+Используется только для:
+
+маршрутов
+
+layout
+
+route-level loading/error states
+
+тонких page-компонентов
+
+серверных entry points
+
+AI не должен размещать крупную бизнес-логику прямо в page.tsx.
+
+7.2 components/
+
+Используется для переиспользуемых визуальных компонентов.
+
+AI должен:
+
+держать UI-компоненты максимально изолированными
+
+выносить повторяющиеся шаблоны
+
+разделять generic UI и domain UI
+
+7.3 features/
+
+Используется для логически сгруппированных клиентских сценариев по доменам:
+
+auth
+
+cargo
+
+vehicles
+
+bids
+
+admin
+
+verification
+
+Здесь может жить:
+
+feature-specific hooks
+
+containers
+
+form logic
+
+action handlers
+
+presentation orchestration
+
+7.4 lib/api/
+
+Здесь находится весь frontend-доступ к backend API.
+
+AI не должен вызывать backend хаотично из компонентов.
+Все вызовы API должны проходить через единый слой.
+
+7.5 types/
+
+Здесь хранятся типы frontend-уровня и типы контрактов API.
+
+AI не должен раскидывать типы бессистемно по десяткам файлов, если это мешает поддержке.
+
+7.6 providers/
+
+Здесь находятся глобальные провайдеры приложения:
+
+auth
+
+query/cache
+
+socket
+
+theme
+
+7.7 store/
+
+Используется только для клиентского состояния интерфейса и локального состояния приложения.
+
+AI не должен использовать store как замену backend.
+
+8. Полная целевая структура backend
+backend/
+├─ src/
+│  ├─ main.ts
+│  ├─ app.module.ts
+│  │
+│  ├─ common/
+│  │  ├─ decorators/
+│  │  ├─ guards/
+│  │  ├─ interceptors/
+│  │  ├─ filters/
+│  │  ├─ pipes/
+│  │  ├─ dto/
+│  │  ├─ types/
+│  │  ├─ constants/
+│  │  ├─ utils/
+│  │  └─ helpers/
+│  │
+│  ├─ config/
+│  │  ├─ app.config.ts
+│  │  ├─ auth.config.ts
+│  │  ├─ database.config.ts
+│  │  ├─ redis.config.ts
+│  │  ├─ storage.config.ts
+│  │  └─ validation.ts
+│  │
+│  ├─ prisma/
+│  │  ├─ prisma.module.ts
+│  │  └─ prisma.service.ts
+│  │
+│  ├─ modules/
+│  │  ├─ auth/
+│  │  │  ├─ auth.module.ts
+│  │  │  ├─ auth.controller.ts
+│  │  │  ├─ auth.service.ts
+│  │  │  ├─ dto/
+│  │  │  ├─ guards/
+│  │  │  ├─ strategies/
+│  │  │  └─ interfaces/
+│  │  │
+│  │  ├─ users/
+│  │  │  ├─ users.module.ts
+│  │  │  ├─ users.controller.ts
+│  │  │  ├─ users.service.ts
+│  │  │  ├─ dto/
+│  │  │  └─ serializers/
+│  │  │
+│  │  ├─ freights/
+│  │  │  ├─ freights.module.ts
+│  │  │  ├─ freights.controller.ts
+│  │  │  ├─ freights.service.ts
+│  │  │  ├─ dto/
+│  │  │  ├─ policies/
+│  │  │  └─ serializers/
+│  │  │
+│  │  ├─ vehicles/
+│  │  │  ├─ vehicles.module.ts
+│  │  │  ├─ vehicles.controller.ts
+│  │  │  ├─ vehicles.service.ts
+│  │  │  ├─ dto/
+│  │  │  └─ serializers/
+│  │  │
+│  │  ├─ bids/
+│  │  │  ├─ bids.module.ts
+│  │  │  ├─ bids.controller.ts
+│  │  │  ├─ bids.service.ts
+│  │  │  ├─ dto/
+│  │  │  └─ serializers/
+│  │  │
+│  │  ├─ orders/
+│  │  │  ├─ orders.module.ts
+│  │  │  ├─ orders.controller.ts
+│  │  │  ├─ orders.service.ts
+│  │  │  ├─ dto/
+│  │  │  └─ serializers/
+│  │  │
+│  │  ├─ notifications/
+│  │  │  ├─ notifications.module.ts
+│  │  │  ├─ notifications.controller.ts
+│  │  │  ├─ notifications.service.ts
+│  │  │  ├─ dto/
+│  │  │  ├─ gateways/
+│  │  │  └─ templates/
+│  │  │
+│  │  ├─ chat/
+│  │  │  ├─ chat.module.ts
+│  │  │  ├─ chat.controller.ts
+│  │  │  ├─ chat.service.ts
+│  │  │  ├─ chat.gateway.ts
+│  │  │  ├─ dto/
+│  │  │  └─ serializers/
+│  │  │
+│  │  ├─ verification/
+│  │  │  ├─ verification.module.ts
+│  │  │  ├─ verification.controller.ts
+│  │  │  ├─ verification.service.ts
+│  │  │  ├─ dto/
+│  │  │  └─ serializers/
+│  │  │
+│  │  ├─ admin/
+│  │  │  ├─ admin.module.ts
+│  │  │  ├─ admin-users.controller.ts
+│  │  │  ├─ admin-freights.controller.ts
+│  │  │  ├─ admin-vehicles.controller.ts
+│  │  │  ├─ admin-reports.controller.ts
+│  │  │  ├─ admin-settings.controller.ts
+│  │  │  ├─ services/
+│  │  │  ├─ dto/
+│  │  │  └─ serializers/
+│  │  │
+│  │  ├─ files/
+│  │  │  ├─ files.module.ts
+│  │  │  ├─ files.controller.ts
+│  │  │  ├─ files.service.ts
+│  │  │  ├─ dto/
+│  │  │  └─ storage/
+│  │  │
+│  │  ├─ audit/
+│  │  │  ├─ audit.module.ts
+│  │  │  ├─ audit.service.ts
+│  │  │  └─ dto/
+│  │  │
+│  │  ├─ payments/
+│  │  │  ├─ payments.module.ts
+│  │  │  ├─ payments.controller.ts
+│  │  │  ├─ payments.service.ts
+│  │  │  ├─ dto/
+│  │  │  └─ providers/
+│  │  │
+│  │  └─ health/
+│  │     ├─ health.module.ts
+│  │     └─ health.controller.ts
+│  │
+│  └─ jobs/
+│     ├─ notifications/
+│     ├─ cleanup/
+│     ├─ moderation/
+│     └─ sync/
+│
+├─ prisma/
+│  ├─ schema.prisma
+│  ├─ migrations/
+│  └─ seed.ts
+│
+├─ test/
+│  ├─ unit/
+│  ├─ integration/
+│  └─ e2e/
+│
+├─ package.json
+├─ tsconfig.json
+├─ nest-cli.json
+└─ .env.example
+9. Правила структуры backend
+9.1 common/
+
+Только общие backend-механизмы:
+
+decorators
+
+guards
 
 filters
 
-dashboards
-
-admin pages
-
-route protection on UI level
-
-API calls to backend
-
-realtime socket connection
-
-local state management
-
-Frontend must not handle:
-
-permission enforcement as source of truth
-
-direct database access
-
-direct auth security logic
-
-secure file storage logic
-
-All critical business logic must stay in backend.
-
-6. backend structure
-
-Backend is built with NestJS modular architecture.
-
-backend/
-│
-├── src/
-│   ├── main.ts
-│   ├── app.module.ts
-│   │
-│   ├── config/
-│   │   ├── configuration.ts
-│   │   ├── env.validation.ts
-│   │   └── constants.ts
-│   │
-│   ├── prisma/
-│   │   ├── prisma.module.ts
-│   │   └── prisma.service.ts
-│   │
-│   ├── common/
-│   │   ├── decorators/
-│   │   ├── dto/
-│   │   ├── enums/
-│   │   ├── filters/
-│   │   ├── guards/
-│   │   ├── interceptors/
-│   │   ├── interfaces/
-│   │   ├── middleware/
-│   │   ├── pipes/
-│   │   └── utils/
-│   │
-│   ├── auth/
-│   │   ├── dto/
-│   │   ├── guards/
-│   │   ├── strategies/
-│   │   ├── auth.controller.ts
-│   │   ├── auth.service.ts
-│   │   ├── auth.module.ts
-│   │   └── auth.types.ts
-│   │
-│   ├── users/
-│   │   ├── dto/
-│   │   ├── users.controller.ts
-│   │   ├── users.service.ts
-│   │   └── users.module.ts
-│   │
-│   ├── drivers/
-│   │   ├── dto/
-│   │   ├── drivers.controller.ts
-│   │   ├── drivers.service.ts
-│   │   └── drivers.module.ts
-│   │
-│   ├── companies/
-│   │   ├── dto/
-│   │   ├── companies.controller.ts
-│   │   ├── companies.service.ts
-│   │   └── companies.module.ts
-│   │
-│   ├── vehicles/
-│   │   ├── dto/
-│   │   ├── vehicles.controller.ts
-│   │   ├── vehicles.service.ts
-│   │   └── vehicles.module.ts
-│   │
-│   ├── freights/
-│   │   ├── dto/
-│   │   ├── freights.controller.ts
-│   │   ├── freights.service.ts
-│   │   └── freights.module.ts
-│   │
-│   ├── bids/
-│   │   ├── dto/
-│   │   ├── bids.controller.ts
-│   │   ├── bids.service.ts
-│   │   └── bids.module.ts
-│   │
-│   ├── conversations/
-│   │   ├── dto/
-│   │   ├── conversations.controller.ts
-│   │   ├── conversations.service.ts
-│   │   └── conversations.module.ts
-│   │
-│   ├── messages/
-│   │   ├── dto/
-│   │   ├── messages.controller.ts
-│   │   ├── messages.service.ts
-│   │   └── messages.module.ts
-│   │
-│   ├── notifications/
-│   │   ├── dto/
-│   │   ├── notifications.controller.ts
-│   │   ├── notifications.service.ts
-│   │   └── notifications.module.ts
-│   │
-│   ├── reviews/
-│   │   ├── dto/
-│   │   ├── reviews.controller.ts
-│   │   ├── reviews.service.ts
-│   │   └── reviews.module.ts
-│   │
-│   ├── reports/
-│   │   ├── dto/
-│   │   ├── reports.controller.ts
-│   │   ├── reports.service.ts
-│   │   └── reports.module.ts
-│   │
-│   ├── uploads/
-│   │   ├── dto/
-│   │   ├── uploads.controller.ts
-│   │   ├── uploads.service.ts
-│   │   └── uploads.module.ts
-│   │
-│   ├── banners/
-│   │   ├── dto/
-│   │   ├── banners.controller.ts
-│   │   ├── banners.service.ts
-│   │   └── banners.module.ts
-│   │
-│   ├── ads/
-│   │   ├── dto/
-│   │   ├── ads.controller.ts
-│   │   ├── ads.service.ts
-│   │   └── ads.module.ts
-│   │
-│   ├── settings/
-│   │   ├── dto/
-│   │   ├── settings.controller.ts
-│   │   ├── settings.service.ts
-│   │   └── settings.module.ts
-│   │
-│   ├── payments/
-│   │   ├── dto/
-│   │   ├── payments.controller.ts
-│   │   ├── payments.service.ts
-│   │   └── payments.module.ts
-│   │
-│   ├── subscriptions/
-│   │   ├── dto/
-│   │   ├── subscriptions.controller.ts
-│   │   ├── subscriptions.service.ts
-│   │   └── subscriptions.module.ts
-│   │
-│   ├── admin/
-│   │   ├── dto/
-│   │   ├── admin-users.controller.ts
-│   │   ├── admin-freights.controller.ts
-│   │   ├── admin-reports.controller.ts
-│   │   ├── admin-settings.controller.ts
-│   │   ├── admin-banners.controller.ts
-│   │   ├── admin-ads.controller.ts
-│   │   ├── admin-audit-logs.controller.ts
-│   │   ├── admin.service.ts
-│   │   └── admin.module.ts
-│   │
-│   ├── realtime/
-│   │   ├── gateways/
-│   │   │   ├── chat.gateway.ts
-│   │   │   ├── notifications.gateway.ts
-│   │   │   └── auctions.gateway.ts
-│   │   ├── realtime.module.ts
-│   │   └── realtime.service.ts
-│   │
-│   ├── redis/
-│   │   ├── redis.module.ts
-│   │   └── redis.service.ts
-│   │
-│   ├── audit/
-│   │   ├── audit.service.ts
-│   │   └── audit.module.ts
-│   │
-│   └── health/
-│       ├── health.controller.ts
-│       └── health.module.ts
-│
-├── test/
-├── package.json
-├── tsconfig.json
-├── nest-cli.json
-├── .env
-└── .env.example
-7. backend module responsibilities
-auth
-
-Handles:
-
-register
-
-login
+interceptors
 
-refresh token
+pipes
 
-logout
+shared DTO
 
-forgot password
+shared helpers
 
-reset password
+AI не должен складывать туда доменную бизнес-логику.
 
-/auth/me
+9.2 config/
 
-users
+Вся централизованная конфигурация backend.
 
-Handles:
+AI должен:
 
-own profile
+хранить env parsing и config factory здесь
 
-public profile
+не разбрасывать чтение env-переменных по всему проекту
 
-profile updates
+9.3 prisma/
 
-drivers
+Слой подключения к БД через Prisma.
 
-Handles:
+9.4 modules/
 
-driver extended profile
+Главная зона доменной логики backend.
 
-driver documents
+Каждый модуль должен быть самостоятельным и понятным.
+Стандарт модуля:
 
-driver-specific information
+module-name/
+├─ module-name.module.ts
+├─ module-name.controller.ts
+├─ module-name.service.ts
+├─ dto/
+├─ serializers/
+└─ дополнительные файлы модуля
+9.5 jobs/
 
-companies
+Фоновые задачи:
 
-Handles:
+напоминания
 
-company / shipper profile
+пересчёты
 
-legal information
+очистка временных данных
 
-company documents
+delayed notifications
 
-vehicles
+moderation routines
 
-Handles:
+AI не должен использовать jobs/ как место для обычной синхронной бизнес-логики.
 
-driver vehicles
+10. Структура документации
+docs/
+├─ AI_RULES.md
+├─ PROJECT_STRUCTURE.md
+├─ BACKEND_ARCHITECTURE.md
+├─ DATABASE_SCHEMA.md
+├─ DATABASE_SCHEMA_SQL.md
+├─ AUTH_FLOW.md
+├─ API_SPEC_BACKEND.md
+├─ ADMIN_PANEL_STRUCTURE.md
+├─ ARCHITECTURE_DIAGRAM.md
+├─ DEVELOPMENT_PLAN.md
+├─ PRODUCT_ROADMAP.md
+└─ legacy/
+   └─ firebase/
+      ├─ FIREBASE_COST_RULES.md
+      ├─ FIREBASE_STRUCTURE.md
+      ├─ FIRESTORE_FULL_RULES.md
+      ├─ FIRESTORE_INDEXES.md
+      └─ FIRESTORE_QUERIES.md
+11. Правила для docs/
 
-vehicle CRUD
+AI должен:
 
-vehicle ownership checks
+поддерживать документы в актуальном состоянии
 
-freights
+хранить активные документы в корне docs/
 
-Handles:
+переносить устаревшие firebase-документы в docs/legacy/firebase/
 
-freight CRUD
+не смешивать целевую архитектуру и устаревшие подходы в одном файле
 
-search
+обновлять связанные документы при архитектурных изменениях
 
-filtering
+AI не должен:
 
-pagination
+оставлять firebase-документы как действующий стандарт
 
-freight status logic
+ссылаться на устаревшие файлы как на основную архитектуру
 
-bids
+менять кодовую архитектуру без синхронного обновления docs
 
-Handles:
+12. Naming conventions
+Общие правила
 
-bid creation
+имена директорий — lowercase, kebab-case при необходимости
 
-accept / reject
+имена файлов — предсказуемые и единообразные
 
-bid ownership and visibility
+один файл = одна явная ответственность
 
-conversations + messages
+не использовать случайные сокращения
 
-Handles:
+Frontend
 
-chat structure
+React components: PascalCase.tsx
 
-participants
+hooks: useXxx.ts
 
-messages
+utility files: camelCase.ts или domain-kebab-case.ts по принятому стилю
 
-read access
+route files: стандарт Next.js (page.tsx, layout.tsx, loading.tsx, error.tsx)
 
-notifications
+Backend
 
-Handles:
+NestJS files: feature-name.controller.ts, feature-name.service.ts, feature-name.module.ts
 
-user notifications
+DTO: create-entity.dto.ts, update-entity.dto.ts, filter-entity.dto.ts
 
-read / unread state
+serializer: entity-response.serializer.ts
 
-reports
+13. Куда AI должен добавлять новый код
+Если задача про страницу:
 
-Handles:
+добавлять в frontend/src/app/...
 
-complaints
+Если задача про UI-блок:
 
-moderation reports
+добавлять в frontend/src/components/...
 
-uploads
+Если задача про доменный frontend-сценарий:
 
-Handles:
+добавлять в frontend/src/features/...
 
-document/image uploads
+Если задача про вызов API:
 
-object storage integration
+добавлять в frontend/src/lib/api/...
 
-deletion rules
+Если задача про backend endpoint:
 
-banners + ads
+добавлять в соответствующий модуль backend/src/modules/...
 
-Handles:
+Если задача про общую backend-защиту:
 
-public promotional blocks
+добавлять в backend/src/common/...
 
-admin CRUD
+Если задача про Prisma:
 
-settings
+изменять backend/prisma/schema.prisma и миграции
 
-Handles:
+Если задача про архитектурные правила:
 
-public platform settings
+изменять docs/...
 
-admin system settings
+14. Куда AI не должен добавлять новый код
 
-admin
+AI не должен создавать новый production-код:
 
-Handles:
+в корневом src/
 
-moderation
+в случайных папках вне frontend/ и backend/
 
-user blocking
+в docs/, если это не документация
 
-freight moderation
+в public/, если это не статические файлы
 
-reports management
+в scripts/, если это бизнес-логика
 
-audit access
+в старых firebase-папках
 
-realtime
+в дублирующих директориях типа components2, new, temp, final-final
 
-Handles:
-
-websocket gateways
-
-live chat
-
-instant notifications
-
-auction live events
-
-audit
-
-Handles:
-
-critical action logs
-
-8. database structure
-
-Database uses Prisma.
-
-database/
-└── prisma/
-    ├── schema.prisma
-    ├── seed.ts
-    └── migrations/
-
-Detailed structure:
-
-database/
-│
-└── prisma/
-    ├── schema.prisma
-    ├── seed.ts
-    ├── seeds/
-    │   ├── admin.seed.ts
-    │   ├── settings.seed.ts
-    │   └── demo-data.seed.ts
-    └── migrations/
-
-Purpose:
-
-schema.prisma — all models
-
-seed.ts — main seed entry
-
-seeds/ — separate seed scripts
-
-migrations/ — generated Prisma migrations
-
-9. storage structure
-
-For development, storage can be described locally.
-
-storage/
-├── minio/
-│   ├── buckets.md
-│   └── policy-example.json
-└── uploads-example/
-
-Recommended buckets:
-
-avatars
-
-driver-documents
-
-company-documents
-
-vehicle-documents
-
-chat-files
-
-banners
-
-ads
-
-Important rule:
-database stores only metadata, not file binaries.
-
-10. scripts structure
-scripts/
-├── dev/
-├── db/
-├── seed/
-└── deploy/
-
-Examples:
-
-development launch helpers
-
-database reset scripts
-
-migration helpers
-
-deployment scripts
-
-11. environment files
-
-Root:
-
-.env.example
-
-Frontend:
-
-frontend/.env.local
-
-Backend:
-
-backend/.env
-backend/.env.example
-
-Typical backend env variables:
-
-PORT=
-DATABASE_URL=
-JWT_ACCESS_SECRET=
-JWT_REFRESH_SECRET=
-JWT_ACCESS_EXPIRES=
-JWT_REFRESH_EXPIRES=
-REDIS_URL=
-S3_ENDPOINT=
-S3_REGION=
-S3_ACCESS_KEY=
-S3_SECRET_KEY=
-S3_BUCKET=
-CORS_ORIGIN=
-
-Typical frontend env variables:
-
-NEXT_PUBLIC_API_URL=
-NEXT_PUBLIC_APP_NAME=
-NEXT_PUBLIC_SOCKET_URL=
-12. route grouping principle
+15. Правила маршрутов frontend
 Public routes
 
-Accessible without login:
+Публичные страницы должны находиться в (public) или в явно публичной зоне.
 
-homepage
+Authenticated routes
 
-freight search
-
-freight details
-
-login
-
-register
-
-contact
-
-public settings
-
-banners
-
-ads
-
-Protected routes
-
-Accessible only for authenticated users:
-
-dashboard
-
-profile
-
-my freights
-
-my bids
-
-vehicles
-
-chat
-
-notifications
+Личный кабинет и пользовательские разделы должны находиться в (dashboard) или аналогичной защищённой группе.
 
 Admin routes
 
-Accessible only for admins:
+Все admin-страницы должны жить только в app/admin/....
 
-admin dashboard
+AI не должен смешивать admin-роуты с обычными пользовательскими страницами.
 
-admin users
+16. Правила модульности backend
 
-admin freights
+Каждый backend-модуль должен:
 
-admin reports
+иметь понятную границу ответственности
 
-admin banners
+не знать лишнего о внутреннем устройстве других модулей
 
-admin ads
+использовать общие механизмы через common/
 
-admin settings
+работать через DTO и сервисы
 
-admin audit logs
+отдавать наружу понятный API
 
-13. naming conventions
-Files
+AI не должен:
 
-Use kebab-case or Nest standard naming:
+писать giant-module на весь проект
 
-Examples:
+смешивать unrelated responsibility
 
-auth.service.ts
+создавать циклические зависимости между модулями
 
-freights.controller.ts
+копировать один и тот же код в несколько модулей
 
-admin-users.controller.ts
+17. Правила тестовой структуры
+Frontend
 
-Types / classes
+При появлении тестов:
 
-Use PascalCase:
+frontend/src/__tests__/
+frontend/src/components/.../*.test.tsx
+frontend/src/features/.../*.test.ts
+Backend
+backend/test/unit/
+backend/test/integration/
+backend/test/e2e/
 
-CreateFreightDto
+AI должен держать тесты рядом с понятной зоной ответственности или в выделенной test-структуре, без хаоса.
 
-UpdateProfileDto
+18. Правила env и конфигурации
+Frontend
 
-JwtAuthGuard
+только публичные переменные с безопасным префиксом
 
-Variables
+без секретов
 
-Use camelCase:
+пример переменных в frontend/.env.example
 
-userId
+Backend
 
-freightStatus
+все секреты только на backend
 
-refreshTokenHash
+конфигурация через env
 
-Database models
+пример переменных в backend/.env.example
 
-Use singular model names in Prisma:
+AI не должен:
 
-User
+вставлять реальные секреты в код
 
-Freight
+хранить токены в markdown-документах
 
-Bid
+размещать чувствительные env в frontend
 
-API endpoints
+19. Правила миграции текущего репозитория к целевой структуре
 
-Use plural resource names:
+Если в репозитории уже есть смешанная структура, AI должен использовать такой принцип:
 
-/api/freights
+новые изменения делать только в целевой зоне
 
-/api/vehicles
+старый код не расширять без необходимости
 
-/api/reports
+при возможности переносить legacy-код по частям
 
-14. development order
+не ломать рабочие части без причины
 
-Recommended implementation order:
+после переноса обновлять документацию
 
-Stage 1
+20. Чеклист для AI перед созданием файла
 
-Core foundation:
+Перед созданием нового файла AI обязан проверить:
 
-project folders
+это frontend, backend или docs?
 
-env files
+есть ли уже подходящая директория?
 
-NestJS setup
+не дублирует ли новый файл существующий?
 
-Prisma setup
+соответствует ли имя файла naming convention?
 
-PostgreSQL connection
+не создаёт ли файл ещё один слой хаоса?
 
-auth module
+можно ли следующему AI быстро понять, зачем этот файл нужен?
 
-users module
+21. Финальный принцип
 
-Stage 2
+Структура проекта должна помогать разработке, а не мешать ей.
 
-Core business:
+Если AI сомневается, куда писать код, он обязан выбрать решение, которое:
 
-freights
+лучше соответствует разделению frontend/backend
 
-vehicles
+уменьшает хаос
 
-bids
+ближе к целевой архитектуре
 
-Stage 3
+легче поддерживается
 
-Communication:
-
-conversations
-
-messages
-
-notifications
-
-realtime gateways
-
-Stage 4
-
-Moderation and platform control:
-
-reports
-
-admin
-
-settings
-
-banners
-
-ads
-
-audit logs
-
-Stage 5
-
-Commercial logic:
-
-subscriptions
-
-payments
-
-promotions
-
-15. migration from Firebase principle
-
-Current Firebase-based logic should be replaced gradually.
-
-Replacement path:
-
-remove Firebase Auth usage
-
-replace Firestore reads/writes with backend REST API
-
-replace Firebase Storage with S3/MinIO
-
-replace realtime listeners with Socket.IO
-
-move settings logic to backend
-
-remove all Firebase SDK code from frontend
-
-Important:
-Do not rewrite everything at once.
-Move module by module.
-
-16. final project principle
-
-The platform must be structured so that:
-
-frontend is responsible only for UI and API interaction
-
-backend is the single source of truth
-
-database is relational and scalable
-
-files live outside the database
-
-realtime is separated from standard CRUD
-
-admin logic is isolated and protected
-
-the project no longer depends on Firebase
-
-17. minimal starting version
-
-If you want the fastest real start, begin with this minimum:
-
-frontend/
-backend/
-database/prisma/
-docs/
-
-And inside backend first create only:
-
-auth/
-users/
-freights/
-bids/
-vehicles/
-prisma/
-common/
-main.ts
-app.module.ts
-
-That is enough to launch the first working independent version.
+не закрепляет legacy
