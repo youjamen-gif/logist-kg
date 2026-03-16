@@ -1,1372 +1,1562 @@
 # API_SPEC_BACKEND.md — Logist.kg
 
-## 1. Goal
+Документ описывает целевой backend API платформы Logist.kg.
 
-This document defines the backend API for Logist.kg using:
+Это основной контракт между frontend и backend.
 
-- NestJS
-- PostgreSQL
-- JWT authentication
-- role-based access control
+Документ фиксирует:
 
-Base URL example:
+- структуру endpoint'ов
+- формат запросов и ответов
+- правила пагинации
+- правила фильтрации
+- правила авторизации
+- разделение public / private / admin API
 
-```http
-/api
+---
 
-2. Roles
+# 1. Общие правила API
 
-Supported roles:
+API Logist.kg строится по принципам:
 
-driver
+- REST-first
+- предсказуемые URL
+- единые форматы ответов
+- строгая типизация DTO
+- backend как единственный источник истины
+- обязательные проверки доступа на сервере
+- pagination-first для списков
 
-shipper
+---
 
-dispatcher
+# 2. Base URL
 
-admin
+```text
+/api/v1
 
-3. Authentication
-POST /api/auth/register
+Все endpoint'ы должны быть версионируемыми.
 
-Register a new user.
-
-Allowed roles:
-
-driver
-
-shipper
-
-dispatcher
-
-Request body:
-
+3. Формат успешного ответа
+3.1 Без пагинации
 {
-  "name": "Ali",
-  "phone": "+996500000000",
-  "email": "ali@example.com",
+  "data": {}
+}
+3.2 Со списком
+{
+  "data": [],
+  "meta": {
+    "pagination": {
+      "limit": 20,
+      "offset": 0,
+      "total": 245,
+      "hasNext": true
+    }
+  }
+}
+4. Формат ошибки
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Validation failed",
+    "details": []
+  }
+}
+5. Авторизация
+
+Защищённые endpoint'ы требуют заголовок:
+
+Authorization: Bearer <access_token>
+6. Основные роли
+guest
+driver
+shipper
+dispatcher
+admin
+7. Основные группы API
+/auth
+/users
+/freights
+/vehicles
+/bids
+/orders
+/chats
+/messages
+/notifications
+/files
+/reviews
+/verification
+/admin
+/system
+/health
+8. AUTH API
+8.1 POST /auth/register
+
+Регистрация пользователя.
+
+Access
+
+Public
+
+Request
+{
+  "email": "user@example.com",
   "password": "StrongPassword123",
+  "name": "Аман Исаев",
+  "phone": "+996509139129",
   "role": "driver"
 }
-
-Response:
-
+Response
 {
-  "user": {
-    "id": "uuid",
-    "name": "Ali",
-    "email": "ali@example.com",
-    "phone": "+996500000000",
-    "role": "driver"
-  },
-  "accessToken": "jwt_access_token",
-  "refreshToken": "jwt_refresh_token"
+  "data": {
+    "accessToken": "jwt_access",
+    "refreshToken": "jwt_refresh",
+    "user": {
+      "id": "uuid",
+      "email": "user@example.com",
+      "role": "driver",
+      "name": "Аман Исаев",
+      "phone": "+996509139129",
+      "status": "active",
+      "documentsVerified": false
+    }
+  }
 }
+8.2 POST /auth/login
 
-Access:
+Логин по email и паролю.
 
-public
+Access
 
-POST /api/auth/login
+Public
 
-Login user.
-
-Request body:
-
+Request
 {
-  "email": "ali@example.com",
+  "email": "user@example.com",
   "password": "StrongPassword123"
 }
-
-Response:
-
+Response
 {
-  "user": {
+  "data": {
+    "accessToken": "jwt_access",
+    "refreshToken": "jwt_refresh",
+    "user": {
+      "id": "uuid",
+      "email": "user@example.com",
+      "role": "driver",
+      "name": "Аман Исаев"
+    }
+  }
+}
+8.3 POST /auth/telegram
+
+Вход через Telegram.
+
+Access
+
+Public
+
+Request
+{
+  "id": "telegram_user_id",
+  "first_name": "Aman",
+  "last_name": "Isaev",
+  "username": "aman_user",
+  "photo_url": "https://...",
+  "auth_date": 1710000000,
+  "hash": "telegram_hash"
+}
+Response
+{
+  "data": {
+    "accessToken": "jwt_access",
+    "refreshToken": "jwt_refresh",
+    "user": {
+      "id": "uuid",
+      "role": "driver"
+    }
+  }
+}
+8.4 POST /auth/refresh
+
+Обновление access token.
+
+Access
+
+Public with valid refresh token
+
+Request
+{
+  "refreshToken": "jwt_refresh"
+}
+Response
+{
+  "data": {
+    "accessToken": "new_jwt_access",
+    "refreshToken": "new_jwt_refresh"
+  }
+}
+8.5 POST /auth/logout
+
+Выход из системы.
+
+Access
+
+Authenticated
+
+Request
+{
+  "refreshToken": "jwt_refresh"
+}
+Response
+{
+  "data": {
+    "success": true
+  }
+}
+8.6 GET /auth/me
+
+Текущий пользователь.
+
+Access
+
+Authenticated
+
+Response
+{
+  "data": {
     "id": "uuid",
-    "name": "Ali",
-    "email": "ali@example.com",
-    "role": "driver"
-  },
-  "accessToken": "jwt_access_token",
-  "refreshToken": "jwt_refresh_token"
+    "email": "user@example.com",
+    "role": "driver",
+    "name": "Аман Исаев",
+    "phone": "+996509139129",
+    "status": "active",
+    "documentsVerified": false,
+    "rating": 4.8,
+    "reviewsCount": 24
+  }
 }
+8.7 POST /auth/change-password
 
-Access:
+Смена пароля.
 
-public
+Access
 
-POST /api/auth/refresh
+Authenticated
 
-Refresh access token.
-
-Request:
-
-refresh token cookie or body
-
-Response:
-
+Request
 {
-  "accessToken": "new_jwt_access_token"
+  "currentPassword": "OldPassword123",
+  "newPassword": "NewPassword123"
 }
-
-Access:
-
-authenticated by refresh token
-
-POST /api/auth/logout
-
-Logout current user.
-
-Response:
-
+Response
 {
-  "message": "Logged out successfully"
+  "data": {
+    "success": true
+  }
 }
+9. USERS API
+9.1 GET /users/profile
 
-Access:
+Получение собственного профиля.
 
-authenticated
+Access
 
-GET /api/auth/me
+Authenticated
 
-Get current authenticated user.
-
-Response:
-
+Response
 {
-  "id": "uuid",
-  "name": "Ali",
-  "email": "ali@example.com",
-  "phone": "+996500000000",
-  "role": "driver",
-  "phoneVerified": false,
-  "documentsVerified": false,
-  "status": "active"
+  "data": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "role": "driver",
+    "name": "Аман Исаев",
+    "phone": "+996509139129",
+    "status": "active",
+    "documentsVerified": false,
+    "rating": 4.8,
+    "reviewsCount": 24
+  }
 }
+9.2 PATCH /users/profile
 
-Access:
+Обновление своего профиля.
 
-authenticated
+Access
 
-POST /api/auth/forgot-password
+Authenticated
 
-Request password reset.
-
-Request body:
-
+Request
 {
-  "email": "ali@example.com"
+  "name": "Новое имя",
+  "phone": "+996700000000"
 }
-
-Response:
-
+Response
 {
-  "message": "Password reset instructions sent if account exists"
+  "data": {
+    "id": "uuid",
+    "name": "Новое имя",
+    "phone": "+996700000000"
+  }
 }
+9.3 GET /users/:id/public
 
-Access:
+Публичный профиль пользователя.
 
-public
+Access
 
-POST /api/auth/reset-password
+Public
 
-Reset password using token.
-
-Request body:
-
+Response
 {
-  "token": "reset_token",
-  "newPassword": "NewStrongPassword123"
+  "data": {
+    "id": "uuid",
+    "name": "Иван Петров",
+    "role": "driver",
+    "rating": 4.9,
+    "reviewsCount": 11
+  }
 }
+9.4 DELETE /users/profile
 
-Response:
+Мягкое удаление своего аккаунта.
 
+Access
+
+Authenticated
+
+Response
 {
-  "message": "Password updated successfully"
+  "data": {
+    "success": true
+  }
 }
+10. FREIGHTS API
+10.1 GET /freights
 
-Access:
+Список грузов.
 
-public with valid reset token
+Access
 
-4. Users
-GET /api/users/me
+Public
 
-Alias for authenticated user profile.
-
-Access:
-
-authenticated
-
-GET /api/users/:id
-
-Get public user profile.
-
-Response:
-
+Query params
+status
+originCity
+destinationCity
+truckType
+loadingDateFrom
+loadingDateTo
+auction
+minPrice
+maxPrice
+limit
+offset
+sortBy
+sortOrder
+Response
 {
-  "id": "uuid",
-  "name": "Ali",
-  "role": "driver",
-  "rating": 4.8,
-  "reviewsCount": 12,
-  "documentsVerified": true
+  "data": [
+    {
+      "id": "uuid",
+      "title": "Груз Бишкек → Ош",
+      "originCity": "Бишкек",
+      "destinationCity": "Ош",
+      "weight": 20,
+      "truckType": "tent",
+      "price": 55000,
+      "auction": false,
+      "status": "active",
+      "loadingDate": "2026-03-20T10:00:00Z",
+      "vehiclesRequired": 1,
+      "vehiclesAssigned": 0,
+      "createdAt": "2026-03-17T12:00:00Z"
+    }
+  ],
+  "meta": {
+    "pagination": {
+      "limit": 20,
+      "offset": 0,
+      "total": 182,
+      "hasNext": true
+    }
+  }
 }
+10.2 GET /freights/:id
 
-Access:
+Детали груза.
 
-authenticated
+Access
 
-PATCH /api/users/me
+Public
 
-Update own base profile.
-
-Request body:
-
+Response
 {
-  "name": "Ali Updated",
-  "phone": "+996500000001"
+  "data": {
+    "id": "uuid",
+    "title": "Груз Бишкек → Ош",
+    "description": "Стройматериалы",
+    "originCity": "Бишкек",
+    "originCountry": "Кыргызстан",
+    "destinationCity": "Ош",
+    "destinationCountry": "Кыргызстан",
+    "weight": 20,
+    "volume": 82,
+    "truckType": "tent",
+    "price": 55000,
+    "auction": false,
+    "status": "active",
+    "vehiclesRequired": 1,
+    "vehiclesAssigned": 0,
+    "loadingDate": "2026-03-20T10:00:00Z",
+    "owner": {
+      "id": "uuid",
+      "name": "Компания А",
+      "rating": 4.7
+    }
+  }
 }
+10.3 POST /freights
 
-Response:
+Создание груза.
 
+Access
+
+Authenticated
+
+Roles
+
+shipper, dispatcher, admin
+
+Request
 {
-  "message": "Profile updated successfully"
+  "title": "Груз Бишкек → Ош",
+  "description": "Стройматериалы",
+  "originCity": "Бишкек",
+  "originCountry": "Кыргызстан",
+  "destinationCity": "Ош",
+  "destinationCountry": "Кыргызстан",
+  "weight": 20,
+  "volume": 82,
+  "truckType": "tent",
+  "price": 55000,
+  "auction": false,
+  "vehiclesRequired": 1,
+  "loadingDate": "2026-03-20T10:00:00Z"
 }
-
-Access:
-
-authenticated
-
-PATCH /api/users/:id/status
-
-Update user status.
-
-Request body:
-
+Response
 {
-  "status": "blocked"
+  "data": {
+    "id": "uuid",
+    "status": "draft"
+  }
 }
+10.4 PATCH /freights/:id
 
-Access:
+Редактирование своего груза.
 
-admin
+Access
 
-PATCH /api/users/:id/role
+Authenticated
 
-Change user role.
+Roles
 
-Request body:
+shipper, dispatcher, admin
 
+Rules
+
+только владелец или admin
+
+нельзя произвольно менять завершённый заказ
+
+Request
 {
-  "role": "dispatcher"
+  "title": "Обновлённый груз",
+  "price": 60000,
+  "auction": true
 }
-
-Access:
-
-admin
-
-5. Driver Profiles
-GET /api/drivers/me
-
-Get own driver profile.
-
-Access:
-
-driver
-
-POST /api/drivers/me
-
-Create driver profile.
-
-Request body:
-
+Response
 {
-  "passportNumber": "ID123456",
+  "data": {
+    "id": "uuid",
+    "title": "Обновлённый груз",
+    "price": 60000,
+    "auction": true
+  }
+}
+10.5 POST /freights/:id/publish
+
+Публикация груза.
+
+Access
+
+Authenticated
+
+Roles
+
+shipper, dispatcher, admin
+
+Response
+{
+  "data": {
+    "id": "uuid",
+    "status": "active"
+  }
+}
+10.6 POST /freights/:id/cancel
+
+Отмена груза.
+
+Access
+
+Authenticated
+
+Roles
+
+shipper, dispatcher, admin
+
+Response
+{
+  "data": {
+    "id": "uuid",
+    "status": "cancelled"
+  }
+}
+10.7 GET /freights/my
+
+Список своих грузов.
+
+Access
+
+Authenticated
+
+Roles
+
+shipper, dispatcher, admin
+
+Query params
+status
+limit
+offset
+sortBy
+sortOrder
+10.8 DELETE /freights/:id
+
+Мягкое удаление груза.
+
+Access
+
+Authenticated
+
+Roles
+
+shipper, dispatcher, admin
+
+Rules
+
+только владелец или admin
+
+нельзя удалить груз с активным заказом
+
+Response
+{
+  "data": {
+    "success": true
+  }
+}
+11. VEHICLES API
+11.1 GET /vehicles
+
+Публичный список транспорта.
+
+Access
+
+Public
+
+Query params
+truckType
+minCapacity
+maxCapacity
+originCity
+limit
+offset
+sortBy
+sortOrder
+11.2 GET /vehicles/:id
+
+Детали транспорта.
+
+Access
+
+Public
+
+11.3 POST /vehicles
+
+Создание транспорта.
+
+Access
+
+Authenticated
+
+Roles
+
+driver, admin
+
+Rules
+
+для driver может требоваться documentsVerified = true
+
+Request
+{
+  "plateNumber": "01KG123ABC",
+  "trailerNumber": "TR9988",
   "truckType": "tent",
   "capacity": 20,
-  "notes": "Experienced driver"
-}
-
-Access:
-
-driver
-
-PATCH /api/drivers/me
-
-Update own driver profile.
-
-Access:
-
-driver
-
-GET /api/drivers/:userId
-
-Get driver public profile.
-
-Access:
-
-authenticated
-
-6. Company Profiles
-GET /api/companies/me
-
-Get own company profile.
-
-Access:
-
-shipper
-
-dispatcher
-
-admin
-
-POST /api/companies/me
-
-Create company profile.
-
-Request body:
-
-{
-  "companyName": "Logist KG LLC",
-  "legalAddress": "Bishkek",
-  "inn": "123456789",
-  "okpo": "987654321"
-}
-
-Access:
-
-shipper
-
-dispatcher
-
-PATCH /api/companies/me
-
-Update own company profile.
-
-Access:
-
-shipper
-
-dispatcher
-
-admin
-
-GET /api/companies/:userId
-
-Get company public profile.
-
-Access:
-
-authenticated
-
-7. Vehicles
-GET /api/vehicles/my
-
-Get current driver's vehicles.
-
-Access:
-
-driver
-
-POST /api/vehicles
-
-Create vehicle.
-
-Request body:
-
-{
-  "plateNumber": "B123ABC",
-  "trailerNumber": "TR456KG",
-  "truckType": "tent",
-  "capacity": 20,
+  "volume": 82,
   "dimensions": "13.6 x 2.45 x 2.7"
 }
+11.4 PATCH /vehicles/:id
 
-Access:
+Редактирование своего транспорта.
 
-driver
+Access
 
-GET /api/vehicles/:id
+Authenticated
 
-Get vehicle by id.
+Roles
 
-Access:
+driver, admin
 
-owner
+Rules
 
-admin
+только владелец или admin
 
-PATCH /api/vehicles/:id
+11.5 GET /vehicles/my
 
-Update own vehicle.
+Список своего транспорта.
 
-Access:
+Access
 
-owner
+Authenticated
 
-admin
+Roles
 
-DELETE /api/vehicles/:id
+driver, admin
 
-Delete own vehicle.
+11.6 DELETE /vehicles/:id
 
-Access:
+Удаление транспорта.
 
-owner
+Access
 
-admin
+Authenticated
 
-8. Freights
-GET /api/freights
+Roles
 
-Get freight list with filters.
+driver, admin
 
-Query params:
+Rules
 
-originCity
+только владелец или admin
 
-destinationCity
+нельзя удалить транспорт, привязанный к активной перевозке
 
-originCountry
+12. BIDS API
+12.1 GET /freights/:freightId/bids
 
-destinationCountry
+Список ставок по грузу.
 
-weightFrom
+Access
 
-weightTo
+Authenticated
 
-truckType
+Roles
 
-loadingDate
+shipper, dispatcher, admin
 
-consolidation
+Rules
 
+только владелец груза или admin
+
+12.2 POST /freights/:freightId/bids
+
+Создание ставки.
+
+Access
+
+Authenticated
+
+Roles
+
+driver, admin
+
+Rules
+
+только на active freight
+
+нельзя ставку на свой груз
+
+можно ограничить одной активной ставкой на водителя
+
+Request
+{
+  "price": 53000,
+  "message": "Готов забрать завтра утром"
+}
+Response
+{
+  "data": {
+    "id": "uuid",
+    "status": "pending",
+    "price": 53000
+  }
+}
+12.3 PATCH /bids/:id
+
+Редактирование своей ставки.
+
+Access
+
+Authenticated
+
+Roles
+
+driver, admin
+
+Rules
+
+только автор или admin
+
+только если ставка ещё не accepted/rejected
+
+12.4 POST /bids/:id/withdraw
+
+Отзыв ставки.
+
+Access
+
+Authenticated
+
+Roles
+
+driver, admin
+
+Response
+{
+  "data": {
+    "id": "uuid",
+    "status": "withdrawn"
+  }
+}
+12.5 POST /bids/:id/accept
+
+Принятие ставки.
+
+Access
+
+Authenticated
+
+Roles
+
+shipper, dispatcher, admin
+
+Rules
+
+только владелец груза или admin
+
+создаётся order
+
+обновляются статусы bid/freight
+
+Response
+{
+  "data": {
+    "bidId": "uuid",
+    "orderId": "uuid",
+    "bidStatus": "accepted"
+  }
+}
+12.6 POST /bids/:id/reject
+
+Отклонение ставки.
+
+Access
+
+Authenticated
+
+Roles
+
+shipper, dispatcher, admin
+
+12.7 GET /bids/my
+
+Список своих ставок.
+
+Access
+
+Authenticated
+
+Roles
+
+driver, admin
+
+Query params
 status
-
-page
-
 limit
+offset
+sortBy
+sortOrder
+13. ORDERS API
+13.1 GET /orders/my
 
-Example:
+Список моих перевозок.
 
-GET /api/freights?originCity=Bishkek&destinationCity=Almaty&truckType=tent&page=1&limit=20
+Access
 
-Response:
+Authenticated
 
+Roles
+
+driver, shipper, dispatcher, admin
+
+Rules
+
+для driver: свои как водитель
+
+для shipper/dispatcher: свои как заказчик
+
+admin: любые
+
+13.2 GET /orders/:id
+
+Детали перевозки.
+
+Access
+
+Authenticated
+
+Rules
+
+участник заказа или admin
+
+13.3 POST /orders/:id/start
+
+Начать перевозку.
+
+Access
+
+Authenticated
+
+Roles
+
+driver, admin
+
+Rules
+
+только назначенный водитель или admin
+
+Response
 {
-  "items": [],
-  "page": 1,
-  "limit": 20,
-  "total": 120
+  "data": {
+    "id": "uuid",
+    "status": "in_transit"
+  }
 }
+13.4 POST /orders/:id/complete
 
-Access:
+Завершить перевозку.
 
-public or authenticated depending on product policy
+Access
 
-GET /api/freights/:id
+Authenticated
 
-Get freight details.
+Roles
 
-Access:
+driver, shipper, dispatcher, admin
 
-public or authenticated depending on product policy
+Rules
 
-POST /api/freights
+по бизнес-логике можно разделить confirm delivery и final complete
 
-Create freight.
-
-Request body:
-
+Response
 {
-  "originCity": "Bishkek",
-  "destinationCity": "Almaty",
-  "originCountry": "KG",
-  "destinationCountry": "KZ",
-  "weight": 10000,
-  "dimensions": "12x2.5x2.7",
-  "price": 50000,
-  "currency": "KGS",
-  "loadingDate": "2026-03-20",
-  "description": "Construction materials",
-  "documentsRequired": true,
-  "consolidation": false,
-  "truckType": "tent",
-  "trucksNeeded": 2,
-  "isAuction": true
+  "data": {
+    "id": "uuid",
+    "status": "delivered"
+  }
 }
+13.5 POST /orders/:id/cancel
 
-Access:
+Отмена перевозки.
 
-shipper
+Access
 
-dispatcher
+Authenticated
 
-admin
+Roles
 
-PATCH /api/freights/:id
+shipper, dispatcher, admin
 
-Update own freight.
+14. CHATS API
+14.1 GET /chats
 
-Access:
+Список чатов текущего пользователя.
 
-owner
+Access
 
-admin
+Authenticated
 
-DELETE /api/freights/:id
-
-Delete or soft-delete freight.
-
-Access:
-
-owner
-
-admin
-
-PATCH /api/freights/:id/status
-
-Update freight status.
-
-Request body:
-
+Response
 {
-  "status": "completed"
+  "data": [
+    {
+      "id": "uuid",
+      "freightId": "uuid",
+      "lastMessage": {
+        "text": "Добрый день",
+        "createdAt": "2026-03-17T13:00:00Z"
+      },
+      "unreadCount": 2
+    }
+  ]
 }
+14.2 POST /chats
 
-Access:
+Создание чата.
 
-owner
+Access
 
-admin
+Authenticated
 
-POST /api/freights/:id/view
-
-Increment freight view count.
-
-Access:
-
-public or authenticated
-
-GET /api/freights/my/list
-
-Get current user's freights.
-
-Access:
-
-shipper
-
-dispatcher
-
-admin
-
-9. Bids
-GET /api/bids/my
-
-Get current driver's bids.
-
-Access:
-
-driver
-
-POST /api/bids
-
-Create bid.
-
-Request body:
-
+Request
 {
   "freightId": "uuid",
-  "price": 47000,
-  "message": "Can load tomorrow"
+  "participantUserId": "uuid"
 }
+Rules
 
-For auction freight, message can be optional.
+чат возможен только при допустимом бизнес-контексте
 
-Access:
+нельзя создать чат самому с собой
 
-driver
+нельзя создавать хаотичные чаты вне связанного объекта
 
-GET /api/bids/freight/:freightId
+14.3 GET /chats/:id
 
-Get bids for a freight.
+Детали чата.
 
-Access:
+Access
 
-freight owner
+Authenticated
 
-admin
+Rules
 
-GET /api/bids/:id
+только участник чата или admin
 
-Get bid details.
+15. MESSAGES API
+15.1 GET /chats/:chatId/messages
 
-Access:
+Сообщения чата.
 
-bid owner
+Access
 
-freight owner
+Authenticated
 
-admin
+Rules
 
-PATCH /api/bids/:id
+только участник чата или admin
 
-Update own bid.
-
-Access:
-
-bid owner
-
-admin
-
-PATCH /api/bids/:id/status
-
-Accept or reject bid.
-
-Request body:
-
-{
-  "status": "accepted"
-}
-
-Access:
-
-freight owner
-
-admin
-
-DELETE /api/bids/:id
-
-Cancel or delete bid.
-
-Access:
-
-bid owner
-
-admin
-
-10. Conversations
-GET /api/conversations/my
-
-Get current user's conversations.
-
-Access:
-
-authenticated
-
-POST /api/conversations
-
-Create conversation.
-
-Request body:
-
-{
-  "type": "freight_chat",
-  "freightId": "uuid",
-  "participantIds": ["user_uuid_1", "user_uuid_2"]
-}
-
-Access:
-
-authenticated
-
-GET /api/conversations/:id
-
-Get one conversation.
-
-Access:
-
-participant
-
-admin
-
-GET /api/conversations/:id/messages
-
-Get conversation messages with pagination.
-
-Query params:
-
-page
-
+Query params
 limit
+cursor
+beforeMessageId
+15.2 POST /chats/:chatId/messages
 
-Access:
+Отправка сообщения.
 
-participant
+Access
 
-admin
+Authenticated
 
-11. Messages
-POST /api/messages
+Rules
 
-Send message.
+только участник чата или admin
 
-Request body:
-
+Request
 {
-  "conversationId": "uuid",
-  "messageText": "Hello"
+  "text": "Здравствуйте, готов обсудить детали"
 }
+Response
+{
+  "data": {
+    "id": "uuid",
+    "chatId": "uuid",
+    "senderUserId": "uuid",
+    "text": "Здравствуйте, готов обсудить детали",
+    "createdAt": "2026-03-17T13:00:00Z"
+  }
+}
+15.3 POST /chats/:chatId/read
 
-Access:
+Отметить сообщения как прочитанные.
 
-participant
+Access
 
-admin
+Authenticated
 
-PATCH /api/messages/:id
+Request
+{
+  "lastReadMessageId": "uuid"
+}
+16. NOTIFICATIONS API
+16.1 GET /notifications
 
-Edit own message if allowed by product rules.
+Список уведомлений.
 
-Access:
+Access
 
-sender
+Authenticated
 
-admin
-
-DELETE /api/messages/:id
-
-Delete own message or moderate message.
-
-Access:
-
-sender
-
-admin
-
-12. Notifications
-GET /api/notifications/my
-
-Get current user's notifications.
-
-Query params:
-
-page
-
-limit
-
+Query params
 isRead
+type
+limit
+offset
+16.2 POST /notifications/:id/read
 
-Access:
+Отметить уведомление как прочитанное.
 
-authenticated
+Access
 
-PATCH /api/notifications/:id/read
+Authenticated
 
-Mark notification as read.
+16.3 POST /notifications/read-all
 
-Access:
+Отметить все уведомления как прочитанные.
 
-owner
+Access
 
-PATCH /api/notifications/read-all
+Authenticated
 
-Mark all notifications as read.
+16.4 DELETE /notifications/:id
 
-Access:
+Удаление уведомления.
 
-authenticated
+Access
 
-POST /api/notifications/system
+Authenticated
 
-Send system notification.
+17. FILES API
+17.1 POST /files/upload
 
-Request body:
+Загрузка файла.
 
+Access
+
+Authenticated
+
+Request
+
+multipart/form-data
+
+Fields
+file
+entityType
+entityId
+category
+Response
 {
-  "userId": "uuid",
-  "title": "Verification approved",
-  "message": "Your documents were approved",
-  "type": "system"
+  "data": {
+    "id": "uuid",
+    "url": "https://storage/...",
+    "mimeType": "image/jpeg",
+    "size": 123456,
+    "originalName": "passport.jpg"
+  }
 }
+17.2 GET /files/:id
 
-Access:
+Получение метаданных файла.
 
-admin
+Access
 
-internal service
+Authenticated
 
-13. Reviews
-POST /api/reviews
+Rules
 
-Create review.
+только владелец связанной сущности
 
-Request body:
+или admin
 
+или публичный доступ, если файл помечен как публичный тип
+
+17.3 DELETE /files/:id
+
+Удаление файла.
+
+Access
+
+Authenticated
+
+18. REVIEWS API
+18.1 POST /orders/:orderId/reviews
+
+Создание отзыва по заказу.
+
+Access
+
+Authenticated
+
+Roles
+
+driver, shipper, dispatcher, admin
+
+Rules
+
+только участник заказа
+
+один отзыв на заказ на сторону по заданной бизнес-модели
+
+Request
 {
   "toUserId": "uuid",
-  "freightId": "uuid",
   "rating": 5,
-  "comment": "Reliable partner"
+  "comment": "Отличная работа"
 }
+18.2 GET /users/:userId/reviews
 
-Access:
+Список отзывов пользователя.
 
-authenticated users involved in completed freight
+Access
 
-GET /api/reviews/user/:userId
+Public
 
-Get reviews for user.
-
-Access:
-
-public or authenticated
-
-DELETE /api/reviews/:id
-
-Delete review if moderation needed.
-
-Access:
-
-admin
-
-14. Reports
-POST /api/reports
-
-Create complaint/report.
-
-Request body:
-
-{
-  "targetEntityType": "freight",
-  "targetEntityId": "uuid",
-  "reportType": "spam",
-  "message": "Suspicious listing"
-}
-
-Access:
-
-authenticated
-
-GET /api/reports
-
-Get reports list.
-
-Query params:
-
-status
-
-page
-
+Query params
 limit
+offset
+sortBy
+sortOrder
+19. VERIFICATION API
+19.1 GET /verification/my-documents
 
-Access:
+Список своих документов.
+
+Access
+
+Authenticated
+
+19.2 POST /verification/documents
+
+Загрузка документа на проверку.
+
+Access
+
+Authenticated
+
+Request
+
+multipart/form-data
+
+Fields
+file
+type
+Allowed type values
+passport
+driver_license
+company_registration
+vehicle_documents
+19.3 DELETE /verification/documents/:id
+
+Удаление своего документа до решения модерации.
+
+Access
+
+Authenticated
+
+20. ADMIN API
+
+Все /admin/* endpoint'ы доступны только роли:
 
 admin
+20.1 GET /admin/users
 
-GET /api/reports/:id
+Список пользователей.
 
-Get report details.
+Query params
+role
+status
+search
+limit
+offset
+sortBy
+sortOrder
+20.2 GET /admin/users/:id
 
-Access:
+Детали пользователя.
 
-admin
+20.3 PATCH /admin/users/:id
 
-PATCH /api/reports/:id/status
+Редактирование пользователя администратором.
 
-Update report status.
-
-Request body:
-
+Request
 {
-  "status": "resolved",
-  "moderatorComment": "Spam removed"
+  "role": "driver",
+  "status": "blocked",
+  "documentsVerified": false
 }
+20.4 POST /admin/users/:id/block
 
-Access:
+Блокировка пользователя.
 
-admin
+20.5 POST /admin/users/:id/unblock
 
-15. Banners
-GET /api/banners
+Разблокировка пользователя.
 
-Get active banners.
+20.6 GET /admin/freights
 
-Access:
+Список всех грузов.
 
-public
+Query params
+status
+ownerUserId
+search
+limit
+offset
+sortBy
+sortOrder
+20.7 GET /admin/freights/:id
 
-POST /api/banners
+Детали груза.
 
-Create banner.
+20.8 POST /admin/freights/:id/hide
 
-Request body:
+Скрытие груза.
 
+20.9 POST /admin/freights/:id/restore
+
+Восстановление груза.
+
+20.10 GET /admin/vehicles
+
+Список транспорта.
+
+20.11 GET /admin/bids
+
+Список ставок.
+
+20.12 GET /admin/orders
+
+Список заказов.
+
+20.13 GET /admin/verification/documents
+
+Список документов на проверку.
+
+Query params
+status
+type
+userId
+limit
+offset
+20.14 POST /admin/verification/documents/:id/approve
+
+Подтверждение документа.
+
+Response
 {
-  "title": "Promo Banner",
-  "imageUrl": "https://...",
-  "link": "https://...",
+  "data": {
+    "id": "uuid",
+    "status": "approved"
+  }
+}
+20.15 POST /admin/verification/documents/:id/reject
+
+Отклонение документа.
+
+Request
+{
+  "reason": "Документ нечитаем"
+}
+20.16 GET /admin/reviews
+
+Список отзывов.
+
+20.17 GET /admin/notifications/system
+
+Системные уведомления и шаблоны.
+
+20.18 GET /admin/audit-logs
+
+Журнал действий.
+
+Query params
+actorUserId
+action
+entityType
+entityId
+dateFrom
+dateTo
+limit
+offset
+20.19 GET /admin/settings
+
+Системные настройки.
+
+20.20 PATCH /admin/settings
+
+Изменение системных настроек.
+
+Request
+{
+  "maintenanceMode": false,
+  "driverVerificationRequired": true,
+  "bidEditWindowMinutes": 15
+}
+20.21 GET /admin/banners
+
+Список баннеров.
+
+20.22 POST /admin/banners
+
+Создание баннера.
+
+Request
+{
+  "title": "Весенняя акция",
+  "imageFileId": "uuid",
+  "link": "https://logist.kg/promo",
   "isActive": true,
   "sortOrder": 1
 }
+20.23 PATCH /admin/banners/:id
 
-Access:
+Редактирование баннера.
 
-admin
+20.24 DELETE /admin/banners/:id
 
-PATCH /api/banners/:id
+Удаление баннера.
 
-Update banner.
+20.25 GET /admin/ads
 
-Access:
+Список рекламы.
 
-admin
+20.26 POST /admin/ads
 
-DELETE /api/banners/:id
+Создание рекламы.
 
-Delete banner.
+20.27 PATCH /admin/ads/:id
 
-Access:
+Редактирование рекламы.
 
-admin
+20.28 DELETE /admin/ads/:id
 
-16. Ads
-GET /api/ads
+Удаление рекламы.
 
-Get active ads.
+21. SYSTEM API
+21.1 GET /system/public-settings
 
-Access:
+Публичные настройки платформы.
 
-public
+Access
 
-POST /api/ads
+Public
 
-Create ad.
-
-Request body:
-
+Response
 {
-  "title": "Top Ad",
-  "imageUrl": "https://...",
-  "link": "https://...",
-  "isActive": true,
-  "startsAt": "2026-03-20T00:00:00Z",
-  "endsAt": "2026-04-20T00:00:00Z"
-}
-
-Access:
-
-admin
-
-PATCH /api/ads/:id
-
-Update ad.
-
-Access:
-
-admin
-
-DELETE /api/ads/:id
-
-Delete ad.
-
-Access:
-
-admin
-
-17. System Settings
-GET /api/settings/public
-
-Get public system settings.
-
-Possible response:
-
-{
-  "siteTheme": "light",
-  "primaryColor": "#000000",
-  "fontFamily": "Inter",
-  "siteTitle": "Logist.kg",
-  "heroTitle": "Find and post freight",
-  "heroSubtitle": "All logistics in one system",
-  "socialLinks": {
-    "telegram": "https://t.me/..."
-  },
-  "supportContacts": {
-    "email": "admin@logist.kg",
-    "phone": "+996509139129"
+  "data": {
+    "maintenanceMode": false,
+    "supportEmail": "admin@logist.kg",
+    "supportPhone": "+996509139129"
   }
 }
+21.2 GET /system/banners
 
-Access:
+Активные баннеры.
 
-public
+Access
 
-GET /api/settings/admin
+Public
 
-Get full settings.
+21.3 GET /system/ads
 
-Access:
+Активная реклама.
 
-admin
+Access
 
-PATCH /api/settings/admin
+Public
 
-Update platform settings.
+22. HEALTH API
+22.1 GET /health
 
-Access:
+Проверка работоспособности сервиса.
 
-admin
+Access
 
-18. Subscriptions
-GET /api/subscriptions/my
+Public
 
-Get own subscriptions.
-
-Access:
-
-authenticated
-
-POST /api/subscriptions
-
-Create subscription order.
-
-Request body:
-
+Response
 {
-  "planName": "premium"
-}
-
-Access:
-
-authenticated
-
-PATCH /api/subscriptions/:id/status
-
-Update subscription status.
-
-Access:
-
-admin
-
-payment webhook service
-
-19. Payments
-GET /api/payments/my
-
-Get own payment history.
-
-Access:
-
-authenticated
-
-POST /api/payments/create
-
-Create payment request.
-
-Request body:
-
-{
-  "subscriptionId": "uuid",
-  "amount": 1000,
-  "currency": "KGS",
-  "paymentMethod": "bank_card"
-}
-
-Access:
-
-authenticated
-
-POST /api/payments/webhook
-
-Payment provider webhook endpoint.
-
-Access:
-
-payment provider
-
-protected by signature
-
-GET /api/payments
-
-Get payments list.
-
-Access:
-
-admin
-
-finance manager if such role is added later
-
-20. Admin
-GET /api/admin/dashboard
-
-Get admin dashboard stats.
-
-Example response:
-
-{
-  "usersCount": 1000,
-  "driversCount": 600,
-  "shippersCount": 300,
-  "activeFreightsCount": 120,
-  "reportsCount": 5,
-  "pendingVerificationCount": 18
-}
-
-Access:
-
-admin
-
-GET /api/admin/users
-
-Get users list with filters.
-
-Query params:
-
-role
-
-status
-
-search
-
-page
-
-limit
-
-Access:
-
-admin
-
-GET /api/admin/freights
-
-Get freights list with moderation filters.
-
-Access:
-
-admin
-
-GET /api/admin/reports
-
-Get moderation reports.
-
-Access:
-
-admin
-
-GET /api/admin/verifications
-
-Get users waiting for verification.
-
-Access:
-
-admin
-
-PATCH /api/admin/users/:id/verify-documents
-
-Verify user documents.
-
-Request body:
-
-{
-  "documentsVerified": true
-}
-
-Access:
-
-admin
-
-PATCH /api/admin/users/:id/verify-phone
-
-Verify user phone.
-
-Request body:
-
-{
-  "phoneVerified": true
-}
-
-Access:
-
-admin
-
-PATCH /api/admin/users/:id/block
-
-Block user.
-
-Request body:
-
-{
-  "status": "blocked"
-}
-
-Access:
-
-admin
-
-PATCH /api/admin/freights/:id/block
-
-Block freight.
-
-Access:
-
-admin
-
-PATCH /api/admin/freights/:id/activate
-
-Activate freight.
-
-Access:
-
-admin
-
-21. Audit Logs
-GET /api/audit-logs
-
-Get audit logs.
-
-Query params:
-
-userId
-
-action
-
-entityType
-
-page
-
-limit
-
-Access:
-
-admin
-
-22. Files / Storage
-POST /api/files/upload
-
-Upload file.
-
-Used for:
-
-avatars
-
-driver documents
-
-company documents
-
-vehicle documents
-
-chat files
-
-banners
-
-ads
-
-Response:
-
-{
-  "fileUrl": "https://storage/.../file.jpg",
-  "filePath": "avatars/file.jpg",
-  "fileType": "image/jpeg",
-  "fileSize": 123456
-}
-
-Access:
-
-authenticated
-
-admin depending on folder rules
-
-DELETE /api/files
-
-Delete file.
-
-Request body:
-
-{
-  "filePath": "avatars/file.jpg"
-}
-
-Access:
-
-owner
-
-admin
-
-23. Realtime / Socket events
-
-Socket.IO events are not classic REST endpoints but should be documented.
-
-chat:join
-
-Join conversation room.
-
-Payload:
-
-{
-  "conversationId": "uuid"
-}
-chat:message
-
-Send realtime message.
-
-Payload:
-
-{
-  "conversationId": "uuid",
-  "messageText": "Hello"
-}
-notification:new
-
-Server emits notification event.
-
-Payload:
-
-{
-  "id": "uuid",
-  "type": "new_bid",
-  "title": "New bid",
-  "message": "A driver sent a bid"
-}
-24. Common response format
-
-Recommended success format:
-
-{
-  "success": true,
-  "data": {}
-}
-
-Recommended error format:
-
-{
-  "success": false,
-  "message": "Validation failed",
-  "errors": {
-    "email": ["Invalid email"]
+  "data": {
+    "status": "ok"
   }
 }
-25. Common rules
+23. Правила пагинации
 
-All list endpoints should support:
+Все endpoint'ы списков обязаны поддерживать хотя бы один из вариантов:
 
-pagination
+Offset pagination
+limit
+offset
+Cursor pagination
+limit
+cursor
 
-filtering
+Для admin-таблиц по умолчанию допустим limit + offset.
 
-sorting where needed
+Для чатов и сообщений предпочтительнее cursor-based пагинация.
 
-All protected endpoints must check:
+24. Правила фильтрации
 
-JWT validity
+Фильтры должны быть:
 
-user role
+явными
 
-ownership when needed
+документированными
 
-All critical actions should write logs to:
+типизированными
 
-audit_logs
+безопасными
 
-26. Final principle
+Backend не должен принимать неограниченные динамические фильтры без DTO.
 
-Backend API must be:
+25. Правила сортировки
 
-independent from Firebase
+Общий формат:
 
-role-safe
+sortBy
+sortOrder=asc|desc
 
-ownership-safe
+Разрешённые поля сортировки должны быть ограничены DTO.
 
-scalable
+26. Правила доступа
+Public
 
-ready for future mobile app and external integrations
+Доступно без токена.
+
+Authenticated
+
+Нужен валидный access token.
+
+Role-protected
+
+Нужен access token + допустимая роль.
+
+Ownership-protected
+
+Нужен access token + допустимая роль + владение сущностью.
+
+Admin-only
+
+Только admin.
+
+27. Правила статусов HTTP
+Успешные
+200 OK
+201 Created
+204 No Content
+Ошибки клиента
+400 Bad Request
+401 Unauthorized
+403 Forbidden
+404 Not Found
+409 Conflict
+422 Unprocessable Entity
+429 Too Many Requests
+Ошибки сервера
+500 Internal Server Error
+28. Правила безопасности API
+
+Backend обязан:
+
+валидировать все входящие DTO
+
+проверять роль
+
+проверять ownership
+
+не возвращать скрытые внутренние поля
+
+ограничивать rate limit на auth и spam-sensitive endpoint'ах
+
+логировать критичные admin и auth операции
+
+защищать file upload endpoints
+
+29. Что нельзя возвращать в API
+
+Backend не должен возвращать:
+
+passwordHash
+
+внутренние refresh token значения
+
+закрытые moderation notes без права доступа
+
+внутренние admin-only поля в public endpoints
+
+лишние ORM поля без сериализации
+
+30. Сериализация ответов
+
+Каждый модуль должен контролировать response model.
+
+Нельзя просто отдавать наружу сырой ORM-объект без фильтрации и нормализации.
+
+31. Правила для AI при добавлении новых endpoint'ов
+
+AI обязан проверить:
+
+нет ли уже похожего endpoint'а
+
+соответствует ли путь общей логике REST
+
+есть ли DTO для body/query/params
+
+есть ли правильный guard
+
+есть ли ownership check
+
+есть ли пагинация для списка
+
+документирован ли новый endpoint в этом файле
+
+не дублирует ли endpoint существующий use case
+
+32. Финальный принцип
+
+API Logist.kg должно быть:
+
+стабильным
+
+предсказуемым
+
+безопасным
+
+удобным для frontend
+
+удобным для AI-генерации кода
+
+масштабируемым
+
+Если endpoint:
+
+дублирует уже существующий
+
+нарушает role model
+
+обходит ownership checks
+
+возвращает сырые внутренние данные
+
+не документирован
+
+он считается плохим и не должен использоваться как стандарт.
